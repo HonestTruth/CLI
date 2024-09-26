@@ -1,0 +1,422 @@
+#source <(kubectl completion bash)
+#alternatively, do this ONCE:
+#kubectl completion bash > /etc/bash_completion.d/kubectl
+
+alias k='kubectl -n "$NAMESPACE"'
+#Ensure to invoke kn "" in current shell to set namespace 1st time and each subsequent time for any method in here
+function kn() { 
+  NS="${1-}"
+  export NAMESPACE="$NS"
+}
+#Get all the things. #TODO consider a 403 in response if privilleges
+function kall() {
+  #get each type while ignoring events and forbidden
+  for i in $(k api-resources --verbs=list --namespaced -o name \
+    | grep -v "events.events.k8s.io" \
+    | grep -v "events" \
+    | sort | uniq); do
+    output=$(k get ${i} --ignore-not-found -o wide)
+    if [[ $output ]]
+    then
+      #echo -e "${i^^} \t ${i}"
+      echo -e "\t\t\t\t${i}"
+      echo "$output"
+      echo
+    fi
+
+  done
+}
+#Useful to see kind/name as well as utilizing clipboard for a "k delete"
+function knames() {
+  for i in $(k api-resources --verbs=list --namespaced -o name \
+    | grep -v "events.events.k8s.io" \
+    | grep -v "events" \
+    | sort | uniq); do
+      k get ${i} --ignore-not-found --template '{{range .items}}{{.kind}}{{"/"}}{{.metadata.name}}{{" \\"}}{{"\n"}}{{end}}'
+  done
+}
+#Very useful utility
+function ksecrets() {
+  k get secrets -o json|jq '.items[]|{"name": .metadata.name, "secret": .data|to_entries|.[]|{"key": .key, "value": .value|@base64d}}' | jq -s
+}
+#Grab logs from a container in a pod with only knowing the metadata name
+function klogs() {
+  POD="${1-}"
+  CONTAINER="${2-}"
+  if [ -z "$POD" ]
+  then
+    echo "Provide a pod name"
+  else
+    if [ -z "$CONTAINER" ]
+    then
+      k logs $(k get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' | grep $POD)
+    else
+      k logs $(k get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' | grep $POD) -c $CONTAINER
+    fi
+  fi
+}
+#Show events but filtered by the creation timestamp
+function kevents(){
+  ALL="${1:-}" #Flag to say all namespaces
+  if [[ $ALL ]]
+  then 
+    kubectl get events --sort-by='.metadata.creationTimestamp' --all-namespaces
+  else
+    k get events --sort-by='.metadata.creationTimestamp'
+  fi
+}
+#Prints logs commands for each pod that has an istio-proxy sidecar
+function kistioproxylogs() { 
+  k get pods --template '{{with $i := .items}}{{range $t := $i}}{{range $c := $t.spec.containers}}{{if eq $c.name "istio-proxy"}}{{printf "k logs %s -c %s" $t.metadata.name $c.name}}{{"\n"}}{{end}}{{end}}{{end}}{{end}}'
+}
+#execute into a pod with only knowing the metadata name
+function kexec() {
+  POD="${1-}"
+  CONTAINER="${2-}" #Pass container name or "" if only 1 container in the pod (or default container is desired)
+  COMMAND="${3-sh}" #default to sh because everything (should) have shell. Preferably override with 'bash'
+ 
+  if [ -z "$POD" ]
+  then
+    echo "Provide a pod name"
+  else
+    if [ -z "$CONTAINER" ]
+    then
+      k exec -it $(k get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' | grep $POD) -- ${COMMAND}
+    else
+      k exec -it $(k get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' | grep $POD) -c $CONTAINER -- ${COMMAND}
+    fi
+  fi
+}
+#Prints containers for current namespace
+function kcontainers {
+  k get pods --template '{{"container\t\t\tpod\n----------------------------------------------------------------\n"}}
+    {{with $i := .items}}{{range $t := $i}}{{range $c := $t.spec.containers}}{{$c.name}}{{"\t\t"}}{{$t.metadata.name}}{{"\n"}}{{end}}{{end}}{{end}}'
+  echo "-----------------------------------------------------------------------"
+  echo "There are $(( $(k get po|wc -l) - 1 )) total pods"
+}
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# ! REQUIRES: html-xml-utils !
+# ! REQUIRES: html2text      !
+# I.e. sudo apt install -y html-xml-utils html2text
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# sudo wget https://github.com/ericchiang/pup/releases/download/v0.4.0/pup_v0.4.0_linux_amd64.zip | sudo unzip 
+# pup_v0.4.0_linux_amd64.zip -d /usr/local/bin
+#Parse out the api documentation for a README for a kind 
+function kapidocs() { 
+  KIND="${1:-}" #Name to be complaint with web-endpoints. May or may not equal "api-resources" name
+  VERSION="${2:-1.28}" #Version of the api documentation
+  SUBVERSION="${3:-}"
+  case $KIND in
+    pod | \
+    replicationcontroller | \
+    endpoints | \
+    service | \
+    configmap | \
+    secret | \
+    persistentvolumeclaim | \
+    volume | \
+    limitrange | \
+    podtemplate | \
+    binding | \
+    componentstatus | \
+    namespace | \
+    node | \
+    persistentvolume | \
+    resourcequota | \
+    serviceaccount)
+      SUBVERSION="v1-core"
+      ;;
+    daemonset | \
+    deployment | \
+    replicaset | \
+    statefulset | \
+    controllerrevision)
+      SUBVERSION="v1-apps"
+      ;;
+    cronjob | \
+    job)
+      SUBVERSION="v1-batch"
+      ;;
+    endpointslice)
+      SUBVERSION="v1-discovery-k8s-io"
+      ;;
+    clustercidr | \
+	ipaddress)
+      SUBVERSION="v1alpha1-networking-k8s-io"
+      ;;
+    ingress | \
+    ingressclass | \
+	networkpolicy)
+      SUBVERSION="v1-networking-k8s-io"
+      ;;
+    csidriver | \
+    csinode | \
+    storageclass | \
+    csistoragecapacity | \
+    volumeattachment)
+      SUBVERSION="v1-storage-k8s-io"
+      ;;
+    clustertrustbundle)
+       SUBVERSION="v1alpha1-certificates-k8s-io"
+       ;;
+    customresourcedefinition)
+       SUBVERSION="v1-apiextensions-k8s-io"
+       ;;
+    event)
+       SUBVERSION="v1-events-k8s-io"
+       ;;
+    horizontalpodautoscaler)
+       SUBVERSION="v2-autoscaling"
+       ;;
+    mutatingwebhookconfiguration | \
+    validatingwebhookconfiguration)
+       SUBVERSION="v1-admissionregistration-k8s-io"
+       ;;
+    validatingadmissionpolicy | \
+    validatingadmissionpolicybinding)
+       SUBVERSION="v1beta1-admissionregistration-k8s-io"
+       ;;
+    podschedulingcontext | \
+    resourceclaim | \
+    resourceclaimtemplate | \
+    resourceclass)
+      SUBVERSION="v1alpha2-resource-k8s-io"
+      ;;
+    poddisruptionbudget)
+      SUBVERSION="v1-policy"
+      ;;
+    priorityclass)
+      SUBVERSION="v1-scheduling-k8s-io"
+      ;;
+    apiservice)
+      SUBVERSION="v1-apiregistration-k8s-io"
+      ;;
+	lease)
+	  SUBVERSION="v1-coordination-k8s-io"
+	  ;;
+	selfsubjectreview | \
+	tokenrequest | \
+	tokenreview)
+	  SUBVERSION="v1-authentication-k8s-io"
+	  ;;
+	certificatesigningrequest)
+	  SUBVERSION="v1-certificates-k8s-io"
+	  ;;
+    clusterrole | \
+    clusterrolebinding | \
+    role | \
+    rolebinding)
+	  SUBVERSION="v1-rbac-authorization-k8s-io"
+	  ;;
+    selfsubjectaccessreview | \
+    selfsubjectrulesreview | \
+    subjectaccessreview | \
+    localsubjectaccessreview)
+	  SUBVERSION="v1-authorization-k8s-io"
+	  ;;
+    flowschema | \
+    prioritylevelconfiguration)
+      SUBVERSION="v1beta3-flowcontrol-apiserver-k8s-io"
+      ;;
+    runtimeclass)
+	  SUBVERSION="v1-node-k8s-io"
+	  ;;
+    storageversion)
+	  SUBVERSION="v1alpha1-internal-apiserver-k8s-io"
+	  ;;
+    *)
+      echo "Please enter a correct kind!"
+      ;;
+  esac
+  #COMMAND=$(curl -sk "https://kubernetes.io/docs/reference/generated/kubernetes-api/v${VERSION}/"|hxnormalize -x|hxselect -i "#${KIND}-${SUBVERSION}"|html2text)
+  #LINENUMBER=$(( $( $COMMAND|grep -n '***** Write Operations *****'|cut -f1 -d:) - 1 ))
+  #echo $LINENUMBER
+  LINENUMBER=$(( $(curl -sk "https://kubernetes.io/docs/reference/generated/kubernetes-api/v${VERSION}/"|hxnormalize -x|hxselect -i "#${KIND}-${SUBVERSION}"|html2text|grep -n '***** Write Operations *****'|cut -f1 -d:) - 1 ))
+  curl -sk "https://kubernetes.io/docs/reference/generated/kubernetes-api/v${VERSION}/"|hxnormalize -x|hxselect -i "#${KIND}-${SUBVERSION}"|html2text|sed -n "1,${LINENUMBER}p"
+}
+
+function ktemplate() { 
+
+KIND="${1:-}" #Name to be complaint with web-endpoints. May or may not equal "api-resources" name
+NAMESPACE="${2:-default}"
+NAME="${3:-}"
+CONTAINER_NAME="${4:-}"
+IMAGE_NAME="${5:-}"
+#NAME="${2:-}"
+#NAME="${2:-}"
+case $KIND in
+
+  pv | \
+  persistentvolume)
+cat << EOF
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: $NAME 
+  namespace: $NAMESPACE
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 2Gi
+  hostPath:
+    path: /tmp/data
+EOF
+;;
+
+  pvc | \
+  persistentvolumeclaim)
+cat << EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: $NAME 
+  namespace: $NAMESPACE
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi 
+  volumeName: $CLAIM_NAME
+  #storageClassName: NULL
+EOF
+;;
+
+  deploy | \
+  deployment)
+cat << EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $NAME 
+  namespace: $NAMESPACE
+spec:
+  template:
+    spec:
+      containers:
+      - name: $CONTAINER_NAME
+        image: $IMAGE_NAME
+        imagePullPolicy: Always #IfNotPresent
+        #env:
+        #- name: $SECRET_ENV
+        #  valueFrom:
+        #    secretKeyRef:
+        #      name: $SECRET_NAME
+        #      key: $SECRET_KEY
+        #readinessProbe:
+        #  initialDelaySeconds: 5
+        #  periodSeconds: 10
+        #  exec:
+        #    command:
+        #      - "sh"
+        #      - "-c"
+        #      - "cat /tmp/ready"
+        #volumeMounts:
+        #- name: $VOLUME_NAME
+        #  mountPath: /tmp/data
+        #- name: $SECRET_VOLUME
+        #  mountPath: /tmp/secret
+        #  #readOnly: true
+      #initContainers:
+      #- name: $INIT_CONTAINER_NAME
+      #  image: $INIT_CONTAINER_IMAGE
+      #imagePullPolicy: Always #IfNotPresent
+      #command:
+      #- sh 
+      #- -c 
+      #- echo "check this out!" > /usr/share/nginx/html/index.html
+      ##For the entire pod
+      #volumes:
+      #- name: $VOLUME_NAME
+      #  persistentVolumeClaim:
+      #    claimName: $CLAIM_NAME
+      #- name: $SECRET_VOLUME
+      #    secret:
+      #      secretName: $SECRET_VOLUME_NAME
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext: {}
+EOF
+;;
+
+  cm | \
+  configmap)
+cat << EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: $NAME 
+  namespace: $NAMESPACE
+data:  
+  "$CM_KEY": |
+    $CM_DATA
+EOF
+;;
+
+  secret | \
+  secrets)
+cat << EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: $NAME 
+  namespace: $NAMESPACE
+data:
+  $SECRET_KEY: $(echo $SECRET_VALUE|base64)
+type: Opaque
+EOF
+;;
+
+  cj | \
+  cronjob)
+cat << EOF
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: $NAME
+  namespace: $NAMESPACE 
+spec:
+  # Example of job definition:
+  # .---------------- minute (0 - 59)
+  # |  .------------- hour (0 - 23)
+  # |  |  .---------- day of month (1 - 31)
+  # |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+  # |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon,tue,wed,thu,fri,sat
+  # |  |  |  |  |
+  # *  *  *  *  *
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: $CONTAINER_NAME 
+            image: $IMAGE_NAME
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+EOF
+;;
+
+  *) #DEFAULT
+echo "Please enter a correct kind!"
+;;
+
+esac
+}
+
+export -f kn
+export -f kall
+export -f knames 
+export -f ksecrets
+export -f klogs
+export -f kevents
+export -f kistioproxylogs
+export -f kexec
+export -f kcontainers
+export -f kapidocs
+export -f ktemplate

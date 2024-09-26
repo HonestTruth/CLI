@@ -1,0 +1,180 @@
+https://docs.aws.amazon.com/cli/latest/reference/ec2/index.html
+
+aws s3api list-buckets
+Newest Imported RHEL8
+ami-0ff3242e0003ec803
+################################################# aws ec2
+ami-01ee1e88c04465cc2 AmazonLinux2
+#ami-0ac4e06a69870e5be RHEL8
+#ami-02407b4e6057fcee3 RHEL8
+ami-02b48c6842582f942 RHEL7
+ami-e9d5ec88
+###
+forge lite
+ami-0c539a0d5ecbf628d
+sg-0d2eae01509b2033b
+###
+idrBlock": "10.2.3.0/24
+255.255.255.0
+10.2.3.1
+10.2.3.100
+aws ec2 describe-subnets --subnet-ids subnet-063bbed8afad1adb5
+aws ec2 describe-images --image-ids ami-01ee1e88c04465cc2
+aws ec2 describe-images --image-ids ami-01ee1e88c04465cc2 ami-0ac4e06a69870e5be ami-e9d5ec88
+aws ec2 describe-images --filters "Name=block-device-mapping.snapshot-id,Values=snap-01e98f784ef3df56b"
+aws ec2 describe-images --filters "Name=description,Values=*AWS-VMImport*Ootpa*"
+aws ec2 describe-images --filters "Name=name,Values=RHEL-8.?*GA*" --output table
+aws ec2 describe-images --filters "Name=name,Values=RHEL-8*"  --query 'Images[*].{name:Name,Id:ImageId,desc:Description,plat:PlatformDetails,date:CreationDate,arch:Architecture}' 
+
+aws ec2 terminate-instances --instance-ids i-054407645a9531786 i-00487013c586708c1 i-0b0758cbd9ea83901
+
+aws ec2 describe-import-image-tasks --import-task-ids import-ami-0ee300085e1ef2d00
+aws ec2 describe-volumes --filters "Name=snapshot-id,Values=snap-0ddc2ee41d91d3246"
+aws ec2 describe-volumes --filters "Name=attachment.instance-id,Values=i-0606330106bf1093a"
+
+aws ec2 create-image --instance-id i-0606330106bf1093a --description "mdpaf-v9-lite-ami-4-12-22" --name "mdpaf-v9-lite"
+
+
+
+### Create json from scratch and then saves the file as .txt
+| jq -c '.[]' | grep "2022" > newRhel8_machines.txt
+###
+| jq -c '.[]' | grep "CentOS 7" > centos_machines.txt
+###
+RHEL-8.0_HVM_GA-20181107-x86_64-0-Hourly2-GP2
+#--filters "Name=name,Values=RHEL-8*"  
+##### nice way to show instances without having access to the web gui
+aws ec2 describe-instances --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,public:PublicIpAddress,private:PrivateIpAddress,Domain:Tags[?Key==`domain`]|[0].Value,Time:LaunchTime,EBS:EbsOptimized,State:State.Name}' --output=table
+
+
+
+
+//Placement Groups
+{
+            "GroupName": "SDL_R3_PlacementGroup_Matt", 
+            "State": "available", 
+            "GroupId": "pg-06ad25a3e69927f98", 
+            "Strategy": "cluster"
+}
+//Security Groups
+{
+    "GroupName": "default",
+    "GroupId": "sg-05ad06ff198424c6d"
+},
+{
+    "GroupName": "mdpaf-v9-internal-traffic",
+    "GroupId": "sg-0af76394829342673"
+},
+{
+    "GroupName": "efs-sg-10",
+    "GroupId": "sg-0318d733205e8f567"
+}
+//Network-IPV6
+
+"Ipv6CidrBlock": "2600:1f12:866:4c03::/64"
+"AssociationId": "subnet-cidr-assoc-0b98a002fb9608fb8"
+mdapf idm01 dev
+instance id:
+i-07a47ae3b86e20904
+"VpcId": "vpc-0c3058aa073fcbb0a"
+InternetGatewayId": "igw-0af68231f28f77193"
+ 
+fe80::404:3bff:fee0:e02c/64
+network-id eni-01ca5f7288850da91
+{
+    "AssignedIpv6Addresses": [
+        "2600:1f12:866:4c03:9b2:93bd:55ac:bb71"
+    ], 
+    "NetworkInterfaceId": "eni-01ca5f7288850da91"
+}
+
+
+nmcli con mod "System eth0" ipv6.addresses "2600:1f12:866:4c03:9b2:93bd:55ac:bb71" gw6 2600:1f12:866:4c03::/64
+
+aws ec2 describe-security-groups --group-ids sg-06c836b8b4bf11546 sg-0af76394829342673 sg-095ea6ce95beec78c
+aws ec2 describe-security-groups --filters Name=vpc-id,Values=vpc-0c3058aa073fcbb0a Name=description,Values=*mdpa*
+
+
+
+## Import image
+aws ec2 import-image --description="Altamira-RHEL8" --disk-containers="$(<./containers.json)"
+[
+  {
+    "Description": "RHEL8 Server OVA From Forge ISO",
+    "Format": "ova",
+    "UserBucket": {
+        "S3Bucket": "import-amis",
+        "S3Key": "rhel8/RHEL8.ova"
+    }
+  }
+]
+#####
+
+############################################################# EXAMPLE TO SETUP AN IPA SERVER IN AWS #######################################
+# fire up a new EC2 instance using Amazon Linux 2
+FORGE_ENV=ec2
+NEW_HOST=idm01
+
+aws ec2 run-instances --count 1 \
+  --image-id ami-01ee1e88c04465cc2 \
+  --instance-type m5a.xlarge \
+  --key-name mdpaf-v9-access \
+  --security-group-ids sg-0af76394829342673 sg-05ad06ff198424c6d sg-07e5908225f8bed0f \
+  --subnet-id subnet-063bbed8afad1adb5 \
+  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=mdpaf-v9-${FORGE_ENV}-${NEW_HOST}}]"
+  
+# find the new PrivateIpAddress (output above) and add it to the hosts file
+NEW_IP_ADDR=9.8.7.6
+
+echo -e "${NEW_IP_ADDR} \t${NEW_HOST}.${FORGE_ENV}.forge" | sudo tee -a /etc/hosts >/dev/null
+
+# copy over the Docker image, then ssh into the new instance (may take a moment to be available)
+
+scp ~dhanger/freeipa-server.tar.gz ${NEW_HOST}.${FORGE_ENV}.forge:.
+scp /etc/hosts ${NEW_HOST}.${FORGE_ENV}.forge:.
+ssh ${NEW_HOST}.${FORGE_ENV}.forge
+
+# now in the shell on the new EC2 instance
+# first, some prereqs
+
+sudo yum install -y docker
+sudo systemctl start docker
+sudo usermod -G docker $USER
+sudo mv ./hosts /etc/hosts
+sudo chown /etc/hosts
+exec newgrp docker
+
+# throw settings in some local variables
+
+DOMAIN=dev.forge
+DEFAULT_PASSWORD=password
+THIS_HOST=idm01
+# finish the preliminary setup
+sudo hostnamectl set-hostname ${THIS_HOST}.${DOMAIN}
+docker load < freeipa-server.tar.gz
+sudo mkdir -p /var/lib/ipa-data
+# configure and run the FreeIPA server
+docker run -d --name freeipa-server \
+  -h ${THIS_HOST}.${DOMAIN} \
+  -v /var/lib/ipa-data:/data:Z \
+  -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+  --sysctl net.ipv6.conf.all.disable_ipv6=0 \
+  -p 53:53/udp \
+  -p 53:53 \
+  -p 80:80 \
+  -p 443:443 \
+  -p 389:389 \
+  -p 636:636 \
+  -p 88:88 \
+  -p 88:88/udp \
+  -p 464:464 \
+  -p 464:464/udp \
+  -p 123:123/udp \
+  freeipa/freeipa-server:centos-8-stream \
+  ipa-server-install \
+  -U \
+   --realm=${DOMAIN^^} \
+   --domain=${DOMAIN} \
+   --admin-password=${DEFAULT_PASSWORD} \
+   --ds-password=${DEFAULT_PASSWORD} \
+   --no-ntp

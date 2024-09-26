@@ -1,0 +1,3 @@
+# REGEX (Patterns to find all replace and only get IP address from apache ssl access logs)
+\/etc\/httpd\/logs\/ssl_access_log-\d+:\d+:
+( - - )(.*)
