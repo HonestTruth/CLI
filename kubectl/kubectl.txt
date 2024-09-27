@@ -90,4 +90,3 @@ kubectl get secrets neptune-sa-v2-token-2fzsm -o json | jq -r '.items[0].data.to
 #2 files needed (b/c base64 requires FILE) 1st: encoded, then 2nd decoded
 knep get secrets neptune-sa-v2-token-2fzsm -o json | jq -r .data.token > key.txt
 base64 -d key.txt > token
-

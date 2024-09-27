@@ -1,5 +1,3 @@
-git clone https://matthew.kaelber:${MATTS_PAT_ZMTRWE}@gitlab.zmtrwe.com/ssp/cfal/cfal-awe-cpp.git
-###################################################### git
 #create a branch. look up some of the flags...
 git checkout -q -b $branch_name --no-track main
 git checkout -q -b $branch_name --detach cdd3bae4 #specific commit
@@ -16,8 +14,8 @@ git checkout -- $FILE
 git checkout $COMMIT  -- $FILE        #where commit is the commit id to revert back to
 #REVERT A BRANCH TO A COMMIT
 #revert branch to a particular commit
-git reset --hard d9c729e2dd1e232ec355f6d6efb8a9534d357bdf
-git push origin george-ssp-289-cfal-app-status --set-upstream --force
+git reset --hard ${COMMIT}
+git push origin ${BRANCH_NAME} --set-upstream --force
 
 Renaming Git Branch #
 git checkout <old_name>
@@ -27,4 +25,4 @@ git push origin -u <new_name>
 git push origin --delete <old_name>
 
 #delete a local branch
-git branch -d feature/{NAME}
+git branch -d ${BRANCH_NAME}

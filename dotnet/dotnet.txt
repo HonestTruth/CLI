@@ -1,5 +1,5 @@
 ---------------               ---------              --------------- 
---------------- DOTNET PACKAGE STUFF IN A LINUX IMAGE--------------- 
+--------------- DOTNET PACKAGE STUFF USING LINUX     --------------- 
 ---------------               ---------              --------------- 
 
 Getting EF Core objects:

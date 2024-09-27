@@ -1,42 +1,6 @@
-############################################################################################################## AZURE DEV OPS
+# AZURE DEV OPS
 --Logs for azure cli/k8s
 az login
 az account list
 az group list
 AZ aks get-credentials --name Exp_SIT --resource-group Exp_SIT --subscription {SUBSCRIPTION_ID}
-
-#ensure namespace is what you need
-namespace abc
-
-kubectl get pods -n abc
-
-#to get logs
-kubectl -n abc logs publicdailyapi-59897c5b68-mvvhq > C:\Users\mkaelber\Desktop\logs.txt
-kubectl -n abc logs flifotoapveinterface-84c5764ff5-k6x68 autosetflifoconfig
-kubectl -n abc logs flifotoapveinterface-dcdc956d9-9qmcz -c autosetflifoconfig
-
-#to get information about a pod
-kubectl describe pods -n abc flifotoapveinterface-78547b4767-czcxz
-kubectl describe pods -n abc flifotoapveinterface-78547b4767-czcxz -c autosetflifoconfig
-
-#edit deployment
-kubectl edit deployment -n abc flifotoapveinterfacerc
-
-#shell into a container (essentially docker?)
-kubectl -n abc exec -it flifotoapveinterface-6b8f657f4c-q8fbg sh
-#shell for init container
-kubectl -n abc exec -it flifotoapveinterface-76ccbdf65-q7mv2 -c autosetflifoconfig sh
-
-#delete
-kubectl -n abc delete deployment flifotoapveinterface                                     --get rids of everything
-
-kubectl -n abc delete pod flifotoapveinterface-6f874dfcc-lv48c							  --the deployment will restart a new pod
-kubectl -n abc delete pod displayapigateway-7698cfd46d-m28tb
-
-#secrets
-kubectl -n abc get secret
-kubectl -n abc get secret connectionstrings -o yaml
-
-kubectl get events --sort-by='.metadata.creationTimestamp' -A -o wide
-
-
