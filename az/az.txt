@@ -1,0 +1,6 @@
+# AZURE DEV OPS
+--Logs for azure cli/k8s
+az login
+az account list
+az group list
+AZ aks get-credentials --name Exp_SIT --resource-group Exp_SIT --subscription {SUBSCRIPTION_ID}

@@ -1,0 +1,92 @@
+#however it is best to download kubectl:
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+docker images
+#within images there should be a minkube one:
+REPOSITORY                                     TAG       IMAGE ID       CREATED         SIZE
+gcr.io/k8s-minikube/kicbase                    v0.0.29   64d09634c60d   2 months ago    1.14GB
+...any other images if present
+
+#Get started with minikube in a linux dev environment
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+minikube start
+minikube kubectl -- get pods -A
+
+oc get nodes -n default -o json | jq '.items[0].status.addresses[0].address'
+nodeip=$(oc get nodes -n default -o json | jq '.items[0].status.addresses[0].address' | tr -d '"')
+
+kubectl -n abc get secret
+kubectl -n abc get secret connectionstrings -o yaml
+
+#donwloading kubectl though and eeignoring that here are helpful aliases:
+alias kall="kubectl get pods -o wide -A"
+alias k="kubectl"
+#Also adding export statements ('persistent' environment variables (for that session?))
+export do="--dry-run=client -o yaml"
+export KUBE_EDITOR="gedit" #ensure that gedit is downloaded
+#This will allow a $do while using > to pipe out the deployment to a yaml file
+
+alias k=kubectl                         # will already be pre-configured
+
+export do="--dry-run=client -o yaml"    # k get pod x $do
+
+export now="--force --grace-period 0"   # k delete pod x $now
+
+kubectl get pods -n kube-system
+kubectl describe pods -n kube-system
+
+kubectl get namespace
+#Recommend to ALWAYS just use shell because any linux box requries shell at a minimum...
+kubectl -n default exec -it test-786ffc9798-tlkwf -- sh
+
+{METADATA_NAME}=kubernetes-bootcamp
+kubectl describe services/{METADATA_NAME}
+rollout status
+kubectl describe pods
+#kubectl rollout status
+kubectl rollout status deployments/{METADATA_NAME}
+#kubectl set image deployments/{METADATA_NAME} {IMAGE_NAME}
+kubectl rollout undo deployments/{METADATA_NAME}
+
+kubectl scale deployments/{METADATA_NAME} --replicas=4
+export NODE_PORT=$(kubectl get services/{METADATA_NAME} -o go-template='{{(index .spec.ports 0).nodePort}}')
+echo NODE_PORT=$NODE_PORT
+curl $(minikube ip):$NODE_PORT
+
+k create -f p2_sunny.yaml
+k create -f p2_sunny.yaml
+k -n sun expose deployment sunny --name sun-srv --port 9999 --target-port 80
+#check yaml afterwards to see if this can be updated
+
+#i used ${NAME}=test
+kk get service ${NAME} -o yaml > service.yaml
+kk get deployment ${NAME} -o yaml > deployment.yaml
+#was able to see the nginx test page by exposing the service test from image nginx as type:NodePort
+#The yaml can then be edited (since it was saved to disk with the pipe) then apply'd with
+kk apply -f deployment.yaml
+kk apply -f service.yaml
+
+
+kubectl get events --all-namespaces  --sort-by='.metadata.creationTimestamp'
+
+--------------------------------------------------END DEMO ----------------------------------------------
+kubectl exec -n cun connectpublicapi-74c64fc4b6-44ggv -- printenv
+
+#Check history (by using describe) can also grep on an id from 2 types simultaneously
+k -n neptune describe job neb-new-job
+k -n default describe pods pod6 | grep --after-context=99999 Events
+k -n neptune get pod,job | grep neb-new-job
+knep rollout history deploy api-new-c32
+
+#Secrets
+knep get secrets neptune-sa-v2-token-2fzsm -o yaml
+knep describe secret neptune-sa-v2-token-2fzsm
+
+#one line to pipe for base64
+kubectl get secrets neptune-sa-v2-token-2fzsm -o json | jq -r '.items[0].data.token' | base64 -d && echo
+
+#2 files needed (b/c base64 requires FILE) 1st: encoded, then 2nd decoded
+knep get secrets neptune-sa-v2-token-2fzsm -o json | jq -r .data.token > key.txt
+base64 -d key.txt > token

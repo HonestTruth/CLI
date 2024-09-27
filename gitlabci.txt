@@ -1,0 +1,1 @@
+echo -e "GIT_ADMIN_TOKEN\n$(echo ${GIT_ADMIN_TOKEN} | base64)

@@ -1,0 +1,31 @@
+mkdir busybox && \
+helm install -f ./busybox/values.yaml busybox ./busybox/
+helm uninstall buxybox
+
+##########################     HELM (CKAD examples)
+
+helm del $(helm ls --all | grep 'DELETED' | awk '{print $1}') --purge
+
+# ckad exam sim 
+➜ helm -n mercury ls
+➜ helm -n mercury uninstall internal-issue-report-apiv1
+➜ helm -n mercury ls
+➜ helm repo list
+➜ helm repo update
+➜ helm search repo nginx
+➜ helm -n mercury upgrade internal-issue-report-apiv2 bitnami/nginx
+➜ helm -n mercury ls
+
+helm show values bitnami/apache # will show a long list of all possible value-settings
+helm show values bitnami/apache | yq e # parse yaml and show with colors
+
+➜ helm -n mercury install internal-issue-report-apache bitnami/apache --set replicaCount=2
+	#deeper level
+➜ helm -n mercury install internal-issue-report-apache bitnami/apache \
+  --set replicaCount=2 \
+  --set image.debug=true
+
+➜ helm -n mercury ls
+➜ k -n mercury get deploy internal-issue-report-apache
+➜ helm -n mercury ls -a
+➜ helm -n mercury uninstall internal-issue-report-daniel

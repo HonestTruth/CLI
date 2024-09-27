@@ -1,0 +1,10 @@
+{
+    "git.enableSmartCommit": true,
+    "explorer.confirmDelete": false,
+    "workbench.editor.enablePreview": false,
+    "git.openRepositoryInParentFolders": "never",
+    "terminal.integrated.enableMultiLinePasteWarning": "never",
+    "terminal.integrated.allowChords": false,
+    "workbench.startupEditor": "none",
+    "git.replaceTagsWhenPull": true
+}

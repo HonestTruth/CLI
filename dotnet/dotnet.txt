@@ -1,0 +1,45 @@
+---------------               ---------              --------------- 
+--------------- DOTNET PACKAGE STUFF USING LINUX     --------------- 
+---------------               ---------              --------------- 
+
+Getting EF Core objects:
+//These 2 libraries are not needed pretty sure but core libraries for EF stuff
+Install-Package Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore
+Install-Package Microsoft.EntityFrameworkCore.SqlServer
+Install-Package Microsoft.EntityFrameworkCore.Design
+//This package is need for the scaffold-dbcontext command and make sure version is matching .NET version. The update command is listed which will update to latest but download will pull latest as well first time
+Install-Package Microsoft.EntityFrameworkCore.Tools
+Update-Package Microsoft.EntityFrameworkCore.Tools
+
+cd 'C:\Program Files\dotnet\sdk'
+dotnet tool install --global dotnet-ef
+dotnet tool install --global dotnet-ef --version 3.1.3
+if errors try this after specific version:
+dotnet tool install --global dotnet-reportgenerator-globaltool --version 3.1.101 --ignore-failed-sources
+Scaffold-DbContext "Server=ADDRESS;Database=CATALOG;User ID=USER;Password=PASSWORD;" Microsoft.EntityFrameworkCore.SqlServer -OutputDir ModelsDUMP -f
+dotnet ef dbcontext scaffold "Server=ADDRESS;Database=DATABASE;User ID=USER;Password=PASSWORD" Microsoft.EntityFrameworkCore.SqlServer -o C:\Users\mkaelber\Desktop\Models_NEWDUMP -f
+
+---------------               ---------              --------------- 
+--------------- NUGET STUFF PACK DOTNET VS NUGET EXE --------------- 
+---------------               ---------              --------------- 
+cd C:\Source\GIT_REPOS\$PROJECT
+dotnet pack -p:PackageVersion=7.10.2007.1401
+dotnet pack -p:PackageVersion=7.10.2007.0603-dev --include-symbols
+
+cd C:\Source\GIT_REPOS\SITA.APVE.Testing.Automation.Common
+dotnet pack -p:PackageVersion=2.2103.1101-dev --include-symbols
+
+SITA.APVE.Testing.Automation.Common.RestAPITools
+
+cd C:\users\mkaelber\downloads
+.\nuget.exe push C:\Source\PROJECT -src https://pkgs.dev.azure.com/$LOCATION -ApiKey AzureDevOps
+cd C:\users\mkaelber\downloads.\nuget.exe delete SITA.APVe.ApiCommunication 7.10.2007.0603-dev -Source https://pkgs.dev.azure.com/sitadaytondevops/_packaging/SITADayton/nuget/v3/index.json -apikey AzureDevOps -5
+
+installutil "C:\Source\~.EXE
+uninstall with -u
+installutil -u "C:\Source\~.EXE"
+Remove-EventLog -LogName "NAME"
+
+sc.exe [<servername>] create [<servicename>] [type= {own | share | kernel | filesys | rec | interact type= {own | share}}] [start= {boot | system | auto | demand | disabled | delayed-auto}] [error= {normal | severe | critical | ignore}] [binpath= <binarypathname>] [group= <loadordergroup>] [tag= {yes | no}] [depend= <dependencies>] [obj= {<accountname> | <objectname>}] [displayname= <displayname>] [password= <password>]
+
+
